@@ -265,12 +265,27 @@ class QCMonitor(Monitor):
         pwutils.makeFilePath(output_file)
         pimg.save(output_file, "PNG")
 
-    def generateShiftPlot(self, x_shifts, y_shifts, output_file):
-        total_shifts = []
-        for x, y in zip(x_shifts, y_shifts):
-            total_shifts.append((x ** 2 + y ** 2) ** 0.5)
-        width = 1/1.5
-        plt.bar(range(len(total_shifts)), total_shifts, width, color="blue")
+    def generateShiftPlot(self, cume_x_shifts, cume_y_shifts, output_file):
+        x_shifts = []
+        y_shifts = []
+        for i in range(1, len(cume_x_shifts)):
+            x_shifts.append(cume_x_shifts[i] - cume_x_shifts[i - 1])
+        for j in range(1, len(cume_y_shifts)):
+            y_shifts.append(cume_y_shifts[j] - cume_y_shifts[j - 1])
+
+        width = 1 / 1.5
+
+        f, axarr = plt.subplots(2, sharex=True)
+
+        axarr[0].bar(range(len(x_shifts)), x_shifts, width, color='blue')
+        axarr[0].set_title('X axis shifts (non-cumulative)')
+        axarr[0].set_ylabel('Shift')
+
+        axarr[1].bar(range(len(y_shifts)), y_shifts, width, color='blue')
+        axarr[1].set_title('Y axis shifts (non-cumulative)')
+        axarr[1].set_xlabel('Frame')
+        axarr[1].set_ylabel('Shift')
+
         plt.savefig(output_file)
         plt.clf()
 
