@@ -292,25 +292,88 @@ class QCMonitor(Monitor):
     def generateEPAPlot(self, input_file, output_file):
         resolution_list = []
         ctf_sim_list = []
-        epa_ln_f_list = []
         epa_ln_f_bg_list = []
-        ccc_list = []
+
+        ccc_lists = {
+            1.0: [],
+            0.8: [],
+            0.5: [],
+        }
+        res_limits = {
+            0.8: None,
+            0.5: None,
+        }
+        ccc_list = ccc_lists[1.0]
 
         with open(input_file) as f:
             next(f)
             for line in f:
                 resolution, ctf_sim, epa_ln_f, epa_ln_f_bg, ccc = \
-                    line.strip().split()
+                    [float(val) for val in line.strip().split()]
 
-                resolution_list.append(float(resolution))
-                ctf_sim_list.append(float(ctf_sim))
-                epa_ln_f_list.append(float(epa_ln_f))
-                epa_ln_f_bg_list.append(float(epa_ln_f_bg))
-                ccc_list.append(float(ccc))
+                resolution_list.append(1.0 / resolution)
+                ctf_sim_list.append(ctf_sim)
+                epa_ln_f_bg_list.append(epa_ln_f_bg)
 
-        plt.plot(resolution_list, ctf_sim_list, color='k')
-        plt.plot(resolution_list, epa_ln_f_bg_list, color='b')
-        plt.plot(resolution_list, ccc_list, color='g')
-        plt.gca().invert_xaxis()
+                if not res_limits[0.8]:
+                    if ccc <= 0.5:
+                        res_limits[0.5] = resolution
+                        res_limits[0.8] = resolution
+                        ccc_list.append({
+                            'resolution': 1.0 / resolution,
+                            'ccc': ccc,
+                        })
+                        ccc_list = ccc_lists[0.5]
+                    elif ccc <= 0.8:
+                        res_limits[0.8] = resolution
+                        ccc_list.append({
+                            'resolution': 1.0 / resolution,
+                            'ccc': ccc,
+                        })
+                        ccc_list = ccc_lists[0.8]
+                elif not res_limits[0.5]:
+                    if ccc <= 0.5:
+                        res_limits[0.5] = resolution
+                        ccc_list.append({
+                            'resolution': 1.0 / resolution,
+                            'ccc': ccc,
+                        })
+                        ccc_list = ccc_lists[0.5]
+                        if not res_limits[0.8]:
+                            res_limits[0.8] = resolution
+                ccc_list.append({
+                    'resolution': 1.0 / resolution,
+                    'ccc': ccc,
+                })
+
+        plt.plot(resolution_list, ctf_sim_list, color='black', label='CTF Sim.')
+        plt.plot(
+            resolution_list, epa_ln_f_bg_list, color='blue', label='BG-Corr. EPA')
+
+        for limit, color in zip([(1.0, 0.8), (0.8, 0.5), (0.5, 0.0)],
+                                ['green', 'orange', 'red']):
+            plt.plot(
+                [x['resolution'] for x in ccc_lists[limit[0]]],
+                [x['ccc'] for x in ccc_lists[limit[0]]],
+                linewidth=2,
+                color=color,
+                label='{} <= CCC < {}'.format(str(limit[0]), str(limit[1])),
+            )
+
+        plt.title('Resolution limits: {} A at 0.8 and {} A at 0.5'.format(
+            str(round(res_limits[0.8], 2)),
+            str(round(res_limits[0.5], 2)),
+        ))
+        plt.axvline(1 / res_limits[0.8], color='orange')
+        plt.axvline(1 / res_limits[0.5], color='red')
+
+        plt.xlabel('Resolution (1 / A)')
+        plt.ylabel('Correlation')
+
+        plt.xlim(min(resolution_list), max(resolution_list))
+        plt.ylim([-0.2, 1.2])
+
+        plt.legend()
+
         plt.savefig(output_file)
         plt.clf()
