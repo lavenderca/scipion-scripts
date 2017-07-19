@@ -357,7 +357,7 @@ class QCMonitor(Monitor):
                 [x['ccc'] for x in ccc_lists[limit[0]]],
                 linewidth=2,
                 color=color,
-                label='{} <= CCC < {}'.format(str(limit[0]), str(limit[1])),
+                label='{} >= CCC > {}'.format(str(limit[0]), str(limit[1])),
             )
 
         plt.title('Resolution limits: {} A at 0.8 and {} A at 0.5'.format(
