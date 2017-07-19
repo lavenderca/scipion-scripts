@@ -350,7 +350,7 @@ class QCMonitor(Monitor):
         plt.plot(
             resolution_list, epa_ln_f_bg_list, color='blue', label='BG-Corr. EPA')
 
-        for limit, color in zip([(1.0, 0.8), (0.8, 0.5), (0.5, 0.0)],
+        for limit, color in zip([(1.0, 0.8), (0.8, 0.5), (0.5, -1.0)],
                                 ['green', 'orange', 'red']):
             plt.plot(
                 [x['resolution'] for x in ccc_lists[limit[0]]],
