@@ -242,14 +242,13 @@ class QCMonitor(Monitor):
                         if not os.path.isfile(f):
                             create = False
                     if create:
-                        result = Image.new("RGB", (800, 800))
+                        result = Image.new("RGB", (1600, 400))
                         for i, f in enumerate(files):
                             img = Image.open(f)
                             img.thumbnail((400, 400), Image.ANTIALIAS)
-                            x = i // 2 * 400
-                            y = i % 2 * 400
+                            x = i * 400
                             w, h = img.size
-                            result.paste(img, (x, y, x + w, y + h))
+                            result.paste(img, (x, 0, x + w, h))
                         result.save(os.path.join(
                             self.workingDir,
                             'extra',
@@ -286,6 +285,7 @@ class QCMonitor(Monitor):
         axarr[1].set_xlabel('Frame')
         axarr[1].set_ylabel('Shift')
 
+        f.set_size_inches(8, 8)
         plt.savefig(output_file)
         plt.clf()
 
@@ -346,9 +346,30 @@ class QCMonitor(Monitor):
                     'ccc': ccc,
                 })
 
-        plt.plot(resolution_list, ctf_sim_list, color='black', label='CTF Sim.')
+        epa_max = max(epa_ln_f_bg_list)
+        epa_min = min(epa_ln_f_bg_list)
+        epa_diff = epa_max - epa_min
+
+        epa_norm = []
+        for val in epa_ln_f_bg_list:
+            epa_norm.append(
+                (val - epa_min) / epa_diff
+            )
+
+        plt.figure(figsize=(8, 8))
         plt.plot(
-            resolution_list, epa_ln_f_bg_list, color='blue', label='BG-Corr. EPA')
+            resolution_list,
+            ctf_sim_list,
+            color='gray',
+            label='CTF Sim.',
+            alpha=0.7,
+        )
+        plt.plot(
+            resolution_list,
+            epa_norm,
+            color='blue',
+            label='BG-Corr. EPA'
+        )
 
         for limit, color in zip([(1.0, 0.8), (0.8, 0.5), (0.5, -1.0)],
                                 ['green', 'orange', 'red']):
