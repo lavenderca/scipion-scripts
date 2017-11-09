@@ -11,43 +11,11 @@ import os
 from subprocess import call
 
 
-def checkRemoteFile(host, path):
-    status = call([
-        'ssh', host, 'test', '-f', path,
-    ])
-    return status == 0
-
-
 class ProtQCSummary(ProtMonitor):
     _label = 'QC summary'
 
     def _defineParams(self, form):
         ProtMonitor._defineParams(self, form)
-
-        form.addSection('Movie file transfer')
-
-        form.addParam('transfer', params.BooleanParam, default=False,
-                      label='Transfer movie files?')
-
-        form.addParam('transferMethod', params.EnumParam, default=0,
-                      choices=['scp', 'bbcp'], condition='transfer',
-                      label='Method to transfer files')
-
-        form.addParam('compress', params.BooleanParam, default=True,
-                      condition='transfer',
-                      label='Compress before transfer?')
-
-        form.addParam('destinationHost', params.StringParam, default=None,
-                      condition='transfer',
-                      label='Destination host')
-
-        form.addParam('destinationDirectory', params.StringParam, default=None,
-                      condition='transfer',
-                      label='Destination directory')
-
-        form.addParam('destinationUser', params.StringParam, default=None,
-                      condition='transfer',
-                      label='Destination user name')
 
     def _validate(self):
         errors = []
@@ -61,13 +29,6 @@ class ProtQCSummary(ProtMonitor):
         monitor = QCMonitor(self, workingDir=self._getPath(),
                             samplingInterval=self.samplingInterval.get(),
                             monitorTime=100,
-
-                            compress=self.compress.get(),
-                            transfer=self.transfer.get(),
-                            transferMethod=self.transferMethod.get(),
-                            destinationHost=self.destinationHost.get(),
-                            destinationDirectory=self.destinationDirectory.get(),  # noqa
-                            destinationUser=self.destinationUser.get(),
                             )
 
         monitor.addNotifier(PrintNotifier())
@@ -80,22 +41,6 @@ class QCMonitor(Monitor):
         self.protocol = protocol
         self.project = protocol.getProject()
         self.run_count = 1
-
-        self.compress = kwargs['compress']
-        self.transfer = kwargs['transfer']
-
-        if kwargs['transferMethod'] == 0:
-            self.transferMethod = 'scp'
-        elif kwargs['transferMethod'] == 1:
-            self.transferMethod = 'bbcp'
-
-        self.destinationHost = kwargs['destinationHost']
-
-        self.destinationDirectory = kwargs['destinationDirectory']
-        if not self.destinationDirectory:
-            self.destinationDirectory = ''
-
-        self.destinationUser = kwargs['destinationUser']
 
     def step(self):
 
@@ -162,65 +107,10 @@ class QCMonitor(Monitor):
 
             if isinstance(prot, ProtImportMovies):
                 for movie in prot.outputMovies:
+
                     movie_base_name = \
                         os.path.splitext(os.path.basename(
                             movie.getFileName()))[0]
-
-                    #  Transfer movie file:
-                    if self.transfer:
-                        transfer_file = os.path.join(
-                            os.getcwd(),
-                            movie.getFileName(),
-                        )
-
-                        #  Compress movie file
-                        if self.compress:
-                            compressed_movie_file = os.path.join(
-                                os.getcwd(),
-                                self.workingDir,
-                                'extra',
-                                movie_base_name + '.gz',
-                            )
-                            if not os.path.isfile(compressed_movie_file):
-                                with open(compressed_movie_file, 'w') as OUT:
-                                    call([
-                                        'gzip', '-c',
-                                        movie.getFileName(),
-                                    ], stdout=OUT)
-                            transfer_file = compressed_movie_file
-
-                        #  Perform transfer
-                        host = self.destinationUser + \
-                            '@' + self.destinationHost
-                        path = os.path.join(self.destinationDirectory,
-                            os.path.basename(transfer_file))
-
-                        if not checkRemoteFile(host, path):
-                            if self.transferMethod == 'scp':
-                                call([
-                                    'scp',
-                                    transfer_file,
-                                    self.destinationUser + '@' +
-                                    self.destinationHost + ':' +
-                                    self.destinationDirectory,
-                                ])
-                            elif self.transferMethod == 'bbcp':
-                                self.info(self.workingDir)
-                                self.info(os.getcwd())
-                                self.info(transfer_file)
-
-                                if self.destinationDirectory == '':
-                                    destination_dir = '.'
-                                else:
-                                    destination_dir = self.destinationDirectory
-
-                                call([
-                                    'bbcp', '-w', '8m', '-s', '16',
-                                    transfer_file,
-                                    self.destinationUser + '@' +
-                                    self.destinationHost + ':' +
-                                    destination_dir,
-                                ])
 
                     #  Compile plot
                     exts = [
